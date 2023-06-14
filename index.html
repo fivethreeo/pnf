@@ -1,0 +1,394 @@
+<!doctype html>
+<html>
+
+<head>
+</head>
+
+<body>
+  <script type="text/javascript">
+    function removeChildren(node) {
+      while (node.firstChild) {
+        node.removeChild(node.lastChild);
+      }
+    }
+    // Define box size and reversal amount
+    const boxSize = 2;
+    const reversalAmount = 3;
+
+    // Fetch minute data from the Alpha Vantage API
+    const apiKey = 'B9NOT39Z48UPOTZF';
+    const symbol = 'TSLA';
+    const apiUrl = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&outputsize=full&symbol=${symbol}&interval=1min&apikey=${apiKey}`;
+
+
+    async function main() {
+      let pyodide = await loadPyodide();
+      await pyodide.loadPackage("micropip");
+      const micropip = pyodide.pyimport("micropip");
+      await micropip.install('setuptools');
+      await micropip.install('pypnf');
+
+      fetch(apiUrl)
+        .then(response => response.json())
+        .then(async datai => {
+          const timeSeries = datai['Time Series (1min)'];
+          const minuteData = Object.entries(timeSeries).map(([date, values]) => ({
+            date: date,
+            open: parseFloat(values['1. open']),
+            high: parseFloat(values['2. high']),
+            low: parseFloat(values['3. low']),
+            close: parseFloat(values['4. close']),
+            volume: parseFloat(values['5. volume'])
+          }));
+          var pyGlobals = pyodide.toPy({
+            minuteData: minuteData,
+            boxSize: boxSize,
+            reversalAmount: reversalAmount,
+            symbol: symbol
+          })
+          await pyodide.runPythonAsync(`from pypnf import PointFigureChart
+
+
+import numpy as np
+from tabulate import tabulate
+
+
+class FullPointFigureChart(PointFigureChart): 
+
+    def __str__(self):
+
+        mtx = self.matrix
+        boxes = self.boxscale.copy()
+
+        print_mtx = self.matrix.copy()
+        last_trendline = []
+        last_trendline_length = []
+
+        if self.trendlines is not None:
+            tlines = self.trendlines
+
+            for n in range(0, np.size(tlines['column index'])):
+
+                if tlines['bounded'][n] == 'external':
+
+                    if tlines['type'][n] == 'bullish support':
+
+                        last_trendline = 'bullish support'
+                        last_trendline_length = tlines['length'][n]
+                        c = tlines['column index'][n]
+                        r = tlines['box index'][n]
+
+                        if mtx[r, c] == 0:
+                            print_mtx[r, c] = 2
+                        k = 1
+
+                        while k < tlines['length'][n] and c < np.shape(mtx)[1] - 1:
+
+                            c = c + 1
+                            r = r + 1
+                            k = k + 1
+
+                            if mtx[r, c] == 0:
+                                print_mtx[r, c] = 2
+
+                    elif tlines['type'][n] == 'bearish resistance':
+
+                        last_trendline = 'bearish resistance'
+                        last_trendline_length = tlines['length'][n]
+                        c = tlines['column index'][n]
+                        r = tlines['box index'][n]
+
+                        if mtx[r, c] == 0:
+                            print_mtx[r, c] = -2
+                        k = 1
+
+                        while k < tlines['length'][n] and c < np.shape(mtx)[1] - 1:
+
+                            c = c + 1
+                            r = r - 1
+                            k = k + 1
+
+                            if mtx[r, c] == 0:
+                                print_mtx[r, c] = -2
+
+        columns = 30
+        total_columns = np.shape(mtx)[1]
+
+        if columns >= total_columns:
+            columns = total_columns
+
+        print_mtx = print_mtx[:, -columns:]
+        idx = np.where(np.sum(np.abs(mtx[:, -columns:]), axis=1) != 0)[0]
+        boxes = boxes[idx]
+        print_mtx = print_mtx[idx, :]
+
+        print_mtx = np.flipud(print_mtx).astype(str)
+        boxes = np.flipud(boxes).astype(str)
+
+        n = 0
+        table = []
+        for m in range(len(boxes)):
+
+            row = print_mtx[m, :]
+            row = [s.replace('0', '.') for s in row]
+            row = [s.replace('-1', 'O') for s in row]
+            row = [s.replace('1', 'X') for s in row]
+            row = [s.replace('-2', '*') for s in row]
+            row = [s.replace('2', '*') for s in row]
+            row = np.hstack((boxes[m], row, boxes[m]))
+
+            if n == 0:
+                table = row
+            else:
+                table = np.vstack((table, row))
+            n += 1
+
+        table = tabulate(table, tablefmt='simple')
+
+        print(self.title)
+        print(table)
+
+        if self.trendlines is not None:
+            print(f'last trendline: {last_trendline} line of length {last_trendline_length}')
+        return f'printed {columns}/{total_columns} columns.'
+
+
+    def table(self):
+
+        mtx = self.matrix
+        boxes = self.boxscale.copy()
+
+        print_mtx = self.matrix.copy()
+        last_trendline = []
+        last_trendline_length = []
+
+        if self.trendlines is not None:
+            tlines = self.trendlines
+
+            for n in range(0, np.size(tlines['column index'])):
+
+                if tlines['bounded'][n] == 'external':
+
+                    if tlines['type'][n] == 'bullish support':
+
+                        last_trendline = 'bullish support'
+                        last_trendline_length = tlines['length'][n]
+                        c = tlines['column index'][n]
+                        r = tlines['box index'][n]
+
+                        if mtx[r, c] == 0:
+                            print_mtx[r, c] = 2
+                        k = 1
+
+                        while k < tlines['length'][n] and c < np.shape(mtx)[1] - 1:
+
+                            c = c + 1
+                            r = r + 1
+                            k = k + 1
+
+                            if mtx[r, c] == 0:
+                                print_mtx[r, c] = 2
+
+                    elif tlines['type'][n] == 'bearish resistance':
+
+                        last_trendline = 'bearish resistance'
+                        last_trendline_length = tlines['length'][n]
+                        c = tlines['column index'][n]
+                        r = tlines['box index'][n]
+
+                        if mtx[r, c] == 0:
+                            print_mtx[r, c] = -2
+                        k = 1
+
+                        while k < tlines['length'][n] and c < np.shape(mtx)[1] - 1:
+
+                            c = c + 1
+                            r = r - 1
+                            k = k + 1
+
+                            if mtx[r, c] == 0:
+                                print_mtx[r, c] = -2
+
+        columns = 30
+        total_columns = np.shape(mtx)[1]
+
+        if columns >= total_columns:
+            columns = total_columns
+
+        print_mtx = print_mtx[:, -columns:]
+        idx = np.where(np.sum(np.abs(mtx[:, -columns:]), axis=1) != 0)[0]
+        boxes = boxes[idx]
+        print_mtx = print_mtx[idx, :]
+
+        print_mtx = np.flipud(print_mtx).astype(str)
+        boxes = np.flipud(boxes).astype(str)
+
+        n = 0
+        table = []
+        for m in range(len(boxes)):
+
+            row = print_mtx[m, :]
+            row = [s.replace('0', '') for s in row]
+            row = [s.replace('-1', 'O') for s in row]
+            row = [s.replace('1', 'X') for s in row]
+            row = [s.replace('-2', '*') for s in row]
+            row = [s.replace('2', '*') for s in row]
+            row = np.hstack((boxes[m], row, boxes[m]))
+
+            if n == 0:
+                table = row
+            else:
+                table = np.vstack((table, row))
+            n += 1
+
+        return table.tolist()
+
+
+ts = {k: [dic[k] for dic in minuteData] for k in minuteData[0]}
+pnf = FullPointFigureChart(
+    ts=ts,
+    method="cl",
+    reversal=reversalAmount,
+    boxsize=boxSize,
+    scaling="abs",
+    title=symbol,
+)
+pnf.get_trendlines(length=4, mode="strong")
+print(pnf.next_simple_signal())
+print(pnf)
+data = pnf.table()`, {
+            globals: pyGlobals
+          });
+          var data = pyGlobals.toJs().get('data')
+          console.log(data);
+          var div = document.createElement('div');
+          div.classList.add('chart')
+
+          // Create a table element
+          var table = document.createElement('table');
+
+          // Iterate over the array and create rows
+          for (var i = 0; i < data.length; i++) {
+            var row = document.createElement('tr');
+
+            // Iterate over each element in the inner array and create cells
+            for (var j = 0; j < data[i].length; j++) {
+              var cell = document.createElement(j === 0 || j === data[i].length - 1 ? 'th' : 'td');
+              if (data[i][j] === 'X' || data[i][j] === 'O') {
+                cell.classList.add(data[i][j] === 'X' ? 'green' : 'red')
+              }
+              cell.textContent = data[i][j];
+              row.appendChild(cell);
+            }
+
+            // Append the row to the table
+            table.appendChild(row);
+          }
+
+          div.appendChild(table);
+
+          // Append the table to the document body
+          var charts = document.getElementsByClassName('cell');
+          removeChildren(charts[0])
+          charts[0].appendChild(div)
+        })
+    }
+
+  // main();
+  </script>
+  <div id="app">
+
+  </div>
+
+  <script type="module">
+        import babelstandalone from 'https://cdn.jsdelivr.net/npm/@babel/standalone@7.22.5/+esm'
+  </script>
+  <script type="text/babel" data-type="module">
+
+    import React from 'https://cdn.jsdelivr.net/npm/react@18.2.0/+esm'
+    import ReactDom from 'https://cdn.jsdelivr.net/npm/react-dom@18.2.0/+esm'
+    import pyodide from 'https://cdn.jsdelivr.net/npm/pyodide@0.23.2/+esm'
+
+    function resizeCanvas(context, canvas) {
+      const { width, height } = canvas.getBoundingClientRect()
+      
+      if (canvas.width !== width || canvas.height !== height) {
+        const { devicePixelRatio:ratio=1 } = window
+        const context = canvas.getContext('2d')
+        canvas.width = width*ratio
+        canvas.height = height*ratio
+        context.scale(ratio, ratio)
+        return true
+      }
+  
+      return false
+    }
+
+    const useCanvas = (draw, options={}) => {
+      
+      const canvasRef = React.useRef(null)
+      
+      React.useEffect(() => {
+        
+        const canvas = canvasRef.current
+        const context = canvas.getContext(options.context || '2d')
+        let frameCount = 0
+        let animationFrameId
+        const render = () => {
+          frameCount++
+          draw(context, frameCount)
+          animationFrameId = window.requestAnimationFrame(render)
+        }
+        if (options.predraw) {
+          options.predraw(context, canvas)
+        }
+        render()
+        return () => {
+          window.cancelAnimationFrame(animationFrameId)
+          if (options.postdraw) {
+            options.postdraw(context)
+          }
+        }
+      }, [draw])
+      return canvasRef
+    }
+
+  const _postdraw = (context) => {
+    index++
+    context.restore()
+   }
+
+   const _predraw = (context, canvas) => {
+    context.save()
+    resizeCanvas(context, canvas)
+    const { width, height } = context.canvas
+    context.clearRect(0, 0, width, height)
+  }
+
+  const Canvas = props => {
+      
+    const { draw, predraw=_predraw, postdraw=_postdraw, ...rest } = props
+    const canvasRef = useCanvas(draw, {predraw, postdraw})
+
+    return <canvas ref={canvasRef} {...rest}/>
+  }
+  
+
+  const draw = (ctx,  canvas) => {
+
+
+    ctx.fillStyle = "#FF0000";
+    ctx.fillRect(0, 0, 150, 75);
+  
+  }
+  const App = props => {
+    return <Canvas draw={draw} />
+  }
+    
+  const container = document.getElementById('app');
+  const root = ReactDom.createRoot(container); // createRoot(container!) if you use TypeScript
+  root.render(<App />);
+  </script>
+</body>
+
+</html>
