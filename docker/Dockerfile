@@ -1,7 +1,8 @@
 # Use an official Python runtime as a parent image
 FROM python:3.8-slim as jupyter
 
-# docker build -t jupyter --target jupyter .
+# docker build -t jupyter --target jupyter docker/
+# docker build -t jupyter_dev --target jupyter_dev docker/
 # docker run -d -p 8888:8888 -it -v $(pwd):/usr/src/app/resources jupyter
 
 # Set the working directory in the container
@@ -36,11 +37,9 @@ RUN deno upgrade --canary
 # Configure Jupyter to use the Deno kernel
 RUN deno jupyter --install
 
-# Download one of the pre-trained super-resolution models from the OpenCV repository
-RUN wget https://github.com/Saafke/EDSR_Tensorflow/raw/master/models/EDSR_x4.pb -O /usr/src/app/EDSR_x4.pb
+# # Download one of the pre-trained super-resolution models from the OpenCV repository
+# RUN wget https://github.com/Saafke/EDSR_Tensorflow/raw/master/models/EDSR_x4.pb -O /usr/src/app/EDSR_x4.pb
 
-# Copy the super_resolution.py script into the container
-COPY super_resolution.py .
 
 # Expose port 8888 for Jupyter Notebook
 EXPOSE 8888
