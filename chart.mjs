@@ -172,8 +172,8 @@ class PointFigureChart {
   }
 
   _is_valid_scaling(scaling) {
-    if (!["abs", "log", "cla"].includes(scaling)) {
-      throw new Error("Not a valid scaling. Valid scales are: abs, log, cla");
+    if (!["abs", "atr", "log", "cla"].includes(scaling)) {
+      throw new Error("Not a valid scaling. Valid scales are: abs, atr, log, cla");
     }
     return scaling;
   }
@@ -194,6 +194,13 @@ class PointFigureChart {
       }
     } else if (this.scaling === "abs") {
       if (boxsize <= 0) {
+        throw new Error("The boxsize must be a value greater than 0.");
+      }
+    } else if (this.scaling === "atr") {
+      if (!Number.isInteger(boxsize) && boxsize !== 'total') {
+        throw new Error("The atr boxsize must be a integer of periods or 'total'.");
+      }
+      if (boxsize !== 'total' && boxsize <= 0) {
         throw new Error("The boxsize must be a value greater than 0.");
       }
     }
@@ -243,6 +250,21 @@ class PointFigureChart {
         throw new Error("The required key 'open' was not found in ts");
       }
     }
+    if (self.scaling === "atr") {
+      if (!("close" in ts)) {
+        throw new Error("The required key 'close' was not found in ts");
+      }
+      if (!("low" in ts)) {
+        throw new Error("The required key 'low' was not found in ts");
+      }
+      if (!("high" in ts)) {
+        throw new Error("The required key 'high' was not found in ts");
+      }
+      if (this.boxSize !== 'total' && boxSize > ts.close.length-1) {
+        throw new Error("ATR period is longer than length of periods");
+      }
+    }
+    
     // Handle 'date' key, convert string to Date, and ensure chronological order
     if (
       !(
@@ -301,7 +323,26 @@ class PointFigureChart {
       overscan_top = overscan[1];
     }
 
-    if (this.scaling === "abs") {
+    if (this.scaling === "abs" || this.scaling === "atr") {
+
+      if (this.scaling === "atr") {
+        let trueRanges = [];
+        this.boxSize = this.boxSize === 'total' ? this.ts.high.length - 1: this.boxSize;
+        // Calculate the true range for the last n days
+        for (let i = this.ts.high.length - this.boxSize; i < this.ts.high.length; i++) {
+          const highLow = this.ts.high[i] - this.ts.low[i];
+          const highClosePrev = Math.abs(this.ts.high[i] - this.ts.close[i - 1]);
+          const lowClosePrev = Math.abs(this.ts.low[i] - this.ts.close[i - 1]);
+
+          // Calculate the true range for each day and add it to the array
+          trueRanges.push(Math.max(highLow, highClosePrev, lowClosePrev));
+        }
+
+        // Calculate the average of the true ranges
+        this.boxSize = trueRanges.reduce((acc, val) => acc + val, 0) / trueRanges.length;
+        this.scaling = 'abs';
+      }
+
       let decimals = this.boxSize.toString().split(".").pop().length;
       boxes.push(0.0);
       let boxSize = round(this.boxSize, decimals);
