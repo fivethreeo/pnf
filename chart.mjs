@@ -1,3 +1,30 @@
+/* 
+ jsPnF
+ A Package for Point and Figure Charting
+ https://github.com/swaschke/pypnf
+
+ Copyright (C) 2021  Stefan Waschke
+
+ This program is free software; you can redistribute it and/or
+ modify it under the terms of the GNU General Public License
+ as published by the Free Software Foundation; either version 2
+ of the License, or (at your option) any later version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+
+ You should have received a copy of the GNU General Public License
+ along with this program; if not, write to the Free Software
+ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+*/
+
+/* 
+The chart module of the pyPnF package contains the main class PointFigureChart.
+The class handles the chart parameter and contains basic attributes like breakouts and trendlines.
+*/
+
 function round(num, decimalPlaces) {
   var p = Math.pow(10, decimalPlaces || 0);
   var n = num * p * (1 + Number.EPSILON);
@@ -33,6 +60,100 @@ function createZeroMatrix(rows, cols) {
 }
 
 class PointFigureChart {
+/* 
+  Class to build a Point and Figure Chart from time series data
+
+    Required attributes:
+    ====================
+
+    ts: dict
+        with keys ['date','open','high','low','close',volume']
+    ts['date']:
+        Optional. Array or value of type str
+    ts['open']:
+        Array or value of type float
+    ts['high']:
+        Array or value of type float
+    ts['low']:
+        Array or value of type float
+    ts['close']:
+        Array or value of type float
+    ts['volume']:
+        Optional. array or value of type int/float
+
+    :method: str
+        methods implemented: 'cl', 'h/l', 'l/h', 'hlc', 'ohlc' default('cl')
+    boxscaling: str
+        scales implemented:
+            'abs', 'atr', 'cla', 'log' default('log')
+        abs:
+            absolute scaling with fixed box sizes.
+        atr:
+            absolute scaling with atr of last n periods
+        log:
+            logarithmic scaling with variable box sizes.
+        cla:
+            classic scaling with semi-variable box sizes.
+    boxSize: int/float/string
+        Size of boxes with regards to the respective scaling default (1).
+        Implemented box sizes for classic scaling are 0.02, 0.05, 0.1, 0.25, 1/3, 0.5, 1, 2.
+        For classic scaling the box size serves as factor to scale the original scale.
+        The minimum boxsize for logarithmic scaling is 0.01%.
+        For atr scaling the number of last n periods to calculate from, 'total' for all periods.
+    title: str
+        user defined label for the chart default(None)
+        label will be created inside the class.
+        The label contains contains the chart parameter and the title.
+
+    Methods:
+    ========
+    getBreakouts(): dict
+        Gets breakout points for Point and Figure Charts.
+        Detailed description in get_breakouts-method.
+    getTrendlines(length, mode): dict
+        Gets trendlines for Point and Figure Charts.
+        Detailed description in get_trendlines-method.
+
+
+    Returned attributes:
+    ====================
+
+    pnfTimeSeries: dict
+        pnfTimeSeries['date']: str or int
+            Array or value of type str if datetime
+        pnfTimeSeries['box value']: float
+            Array with prices of the last filled box
+        pnfTimeSeries['box index']: float
+            Array with indices of the last filled box.
+        pnfTimeSeries['column index']: float
+            Array with indices of the current column.
+        pnfTimeSeries['trend']: float
+            Array with values for the current trend.
+            Uptrends:    1
+            Downtrends: -1
+        pnfTimeSeries['filled boxes']: float
+            Array with values for number of filled boxes in the current column.
+
+        Note:
+            Due to the usage of numpy.nan all indices are of type float instead of int.
+
+    boxScale: numpy.ndarray
+        1-dim numpy array with box values in increasing order.
+    matrix: numpy.ndarray
+        2-dim numpy array representing the Point and Figure Chart
+        with values 0, 1 and -1. Zero represents an unfilled box,
+        One a box filled with an X and neg. One filled with an O.
+        Columns are equivalent to the chart columns, rows to the
+        corresponding index in the boxscale.
+    trendlines: dict
+       Detailed description in get_trendline-method.
+    title: str
+        Label containing chart parameter and user-defined title.
+    breakouts: dict
+        Detailed description in get_breakouts-method.
+
+*/
+
   constructor(
     ts,
     method = "cl",
@@ -173,7 +294,9 @@ class PointFigureChart {
 
   _is_valid_scaling(scaling) {
     if (!["abs", "atr", "log", "cla"].includes(scaling)) {
-      throw new Error("Not a valid scaling. Valid scales are: abs, atr, log, cla");
+      throw new Error(
+        "Not a valid scaling. Valid scales are: abs, atr, log, cla"
+      );
     }
     return scaling;
   }
@@ -197,10 +320,12 @@ class PointFigureChart {
         throw new Error("The boxsize must be a value greater than 0.");
       }
     } else if (this.scaling === "atr") {
-      if (!Number.isInteger(boxsize) && boxsize !== 'total') {
-        throw new Error("The atr boxsize must be a integer of periods or 'total'.");
+      if (!Number.isInteger(boxsize) && boxsize !== "total") {
+        throw new Error(
+          "The atr boxsize must be a integer of periods or 'total'."
+        );
       }
-      if (boxsize !== 'total' && boxsize <= 0) {
+      if (boxsize !== "total" && boxsize <= 0) {
         throw new Error("The boxsize must be a value greater than 0.");
       }
     }
@@ -260,11 +385,11 @@ class PointFigureChart {
       if (!("high" in ts)) {
         throw new Error("The required key 'high' was not found in ts");
       }
-      if (this.boxSize !== 'total' && boxSize > ts.close.length-1) {
+      if (this.boxSize !== "total" && boxSize > ts.close.length - 1) {
         throw new Error("ATR period is longer than length of periods");
       }
     }
-    
+
     // Handle 'date' key, convert string to Date, and ensure chronological order
     if (
       !(
@@ -324,14 +449,20 @@ class PointFigureChart {
     }
 
     if (this.scaling === "abs" || this.scaling === "atr") {
-
       if (this.scaling === "atr") {
         let trueRanges = [];
-        this.boxSize = this.boxSize === 'total' ? this.ts.high.length - 1: this.boxSize;
+        this.boxSize =
+          this.boxSize === "total" ? this.ts.high.length - 1 : this.boxSize;
         // Calculate the true range for the last n days
-        for (let i = this.ts.high.length - this.boxSize; i < this.ts.high.length; i++) {
+        for (
+          let i = this.ts.high.length - this.boxSize;
+          i < this.ts.high.length;
+          i++
+        ) {
           const highLow = this.ts.high[i] - this.ts.low[i];
-          const highClosePrev = Math.abs(this.ts.high[i] - this.ts.close[i - 1]);
+          const highClosePrev = Math.abs(
+            this.ts.high[i] - this.ts.close[i - 1]
+          );
           const lowClosePrev = Math.abs(this.ts.low[i] - this.ts.close[i - 1]);
 
           // Calculate the true range for each day and add it to the array
@@ -339,8 +470,9 @@ class PointFigureChart {
         }
 
         // Calculate the average of the true ranges
-        this.boxSize = trueRanges.reduce((acc, val) => acc + val, 0) / trueRanges.length;
-        this.scaling = 'abs';
+        this.boxSize =
+          trueRanges.reduce((acc, val) => acc + val, 0) / trueRanges.length;
+        this.scaling = "abs";
       }
 
       let decimals = this.boxSize.toString().split(".").pop().length;
