@@ -397,6 +397,7 @@ class PointFigureChart:
         # if date is datetime64 check if last date in array is the latest and
         # flip the array if not.
         if isinstance(ts['date'][0], np.datetime64):
+
             if ts['date'][0] > ts['date'][-1]:
                 for key in ts.keys():
                     ts[key] = np.flip(ts[key])
@@ -2168,7 +2169,7 @@ class PointFigureChart:
         scaling = self.scaling
 
         if scaling == 'log':
-            base = 1 + pnf.boxsize / 100
+            base = 1 + self.boxsize / 100
 
         for num, val in enumerate(array):
 
