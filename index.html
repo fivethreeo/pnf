@@ -86,6 +86,7 @@
     </div>
 
     <script>
+        const svgElement = document.getElementById("svg");
         const zoomContainer = document.getElementById("zoom-container");
         const graphContainer = document.getElementById("graph-container");
         const symbolSize = 50; // Size of each symbol, adjust as needed
@@ -192,7 +193,7 @@
             height = 30 * yIncr;
 
             svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
-            bBox = graphContainer.getBBox();
+            bBox = zoomContainer.getBBox();
 
             const visibleHeight = max - min
             const prepareZoomScale = height / (visibleHeight + symbolSize + 80);
@@ -204,25 +205,25 @@
 
         function addPSARIndicator(key, indicator) {
 
-            const scatterPoints = indicator.map((value, idx )=> {
-                return !Number.isNaN(value) ? [(idx+1.65)*xIncr, bBox.height-(Math.abs(value)-5.65)*yIncr, Math.sign(value)] : false
-            }).filter(x=>x)
+            const scatterPoints = indicator.map((value, idx) => {
+                return !Number.isNaN(value) ? [(idx + 1.65) * xIncr, bBox.height - (Math.abs(value) - 5.65) * yIncr, Math.sign(value)] : false
+            }).filter(x => x)
 
 
             const indicatorGroup = document.createElementNS(
                 "http://www.w3.org/2000/svg",
                 "g"
             );
-            scatterPoints.map(value=> {
-            const circle = document.createElementNS(
-                "http://www.w3.org/2000/svg",
-                "circle"
-            );
-            circle.setAttribute("r", 15)
-            circle.setAttribute("cx", value[0])
-            circle.setAttribute("cy", value[1])
-            circle.setAttribute("fill", (value[2] < 0) ? "hotpink":"cornflowerblue")
-            indicatorGroup.appendChild(circle)
+            scatterPoints.map(value => {
+                const circle = document.createElementNS(
+                    "http://www.w3.org/2000/svg",
+                    "circle"
+                );
+                circle.setAttribute("r", 15)
+                circle.setAttribute("cx", value[0])
+                circle.setAttribute("cy", value[1])
+                circle.setAttribute("fill", (value[2] < 0) ? "hotpink" : "cornflowerblue")
+                indicatorGroup.appendChild(circle)
             })
             graphContainer.appendChild(indicatorGroup)
 
@@ -230,23 +231,23 @@
 
         function addFilledIndicator(key, indicator_upper, indicator_lower) {
 
-            const pathPointsUpper = indicator_upper.map((value, idx )=> {
-                return !Number.isNaN(value) ? [(idx+1.65)*xIncr, bBox.height-(yIncr*(value-5.65))] : false
-            }).filter(x=>x)
+            const pathPointsUpper = indicator_upper.map((value, idx) => {
+                return !Number.isNaN(value) ? [(idx + 1.65) * xIncr, bBox.height - (yIncr * (value - 5.65))] : false
+            }).filter(x => x)
 
-            const pathUpper = `M ${pathPointsUpper.map((value, idx )=> {
+            const pathUpper = `M ${pathPointsUpper.map((value, idx) => {
                 return `${value[0]} ${value[1]}`
             }).join(' L ')}`;
 
-            const pathPointsLower = indicator_lower.map((value, idx )=> {
-                return !Number.isNaN(value) ? [(idx+1.65)*xIncr, bBox.height-(yIncr*(value-5.65))] : false
-            }).filter(x=>x)
+            const pathPointsLower = indicator_lower.map((value, idx) => {
+                return !Number.isNaN(value) ? [(idx + 1.65) * xIncr, bBox.height - (yIncr * (value - 5.65))] : false
+            }).filter(x => x)
 
-            const pathLower = `M ${pathPointsLower.map((value, idx )=> {
+            const pathLower = `M ${pathPointsLower.map((value, idx) => {
                 return `${value[0]} ${value[1]}`
             }).join(' L ')}`;
 
-            const pathFill = `M ${pathPointsUpper.concat(pathPointsLower.slice().reverse()).map((value, idx )=> {
+            const pathFill = `M ${pathPointsUpper.concat(pathPointsLower.slice().reverse()).map((value, idx) => {
                 return `${value[0]} ${value[1]}`
             }).join(' L ')} Z`;
 
@@ -298,11 +299,11 @@
 
         function addLineIndicator(key, indicator) {
 
-            const pathPoints = indicator.map((value, idx )=> {
-                return !Number.isNaN(value) ? [(idx+1.65)*xIncr, bBox.height-(yIncr*(value-6))] : false
-            }).filter(x=>x)
+            const pathPoints = indicator.map((value, idx) => {
+                return !Number.isNaN(value) ? [(idx + 1.65) * xIncr, bBox.height - (yIncr * (value - 6))] : false
+            }).filter(x => x)
 
-            const path = `M ${pathPoints.map((value, idx )=> {
+            const path = `M ${pathPoints.map((value, idx) => {
                 return `${value[0]} ${value[1]}`
             }).join(' L ')}`;
 
@@ -397,19 +398,27 @@
         addYAxis(plotBoxScale, zoomScale);
 
         const container = document.getElementById("container");
-        container.addEventListener("mousedown", function (e) {
+
+        let startPoint = { x: 0, y: 0 };
+
+        container.addEventListener('mousedown', function (event) {
             isPanning = true;
-            startX = e.clientX;
-            startY = e.clientY;
+            startPoint = convertScreenToSVG(event, svgElement);
         });
 
-        container.addEventListener("mousemove", function (e) {
-            if (!isPanning) return;
-            panX += e.clientX - startX;
-            panY += e.clientY - startY;
-            startX = e.clientX;
-            startY = e.clientY;
-            updateTransform();
+        container.addEventListener('mousemove', function (event) {
+            if (isPanning) {
+                const newPoint = convertScreenToSVG(event, svgElement);
+                const dx = newPoint.x - startPoint.x;
+                const dy = newPoint.y - startPoint.y;
+
+                // Update panX and panY here based on dx, dy
+                panX += dx;
+                panY += dy;
+                updateTransform();
+
+                startPoint = newPoint; // Update start point for the next move
+            }
         });
 
         container.addEventListener("mouseup", function () {
@@ -419,11 +428,41 @@
             isPanning = false;
         });
 
+        function convertScreenToSVG(event, svgElement) {
+            const point = svgElement.createSVGPoint();
+            point.x = event.clientX;
+            point.y = event.clientY;
+            const ctm = svgElement.getScreenCTM();
+            if (ctm) {
+                const inverse = ctm.inverse();
+                const svgPoint = point.matrixTransform(inverse);
+                return { x: svgPoint.x, y: svgPoint.y };
+            }
+            return { x: 0, y: 0 }; // Fallback in case of no CTM
+        }
         container.addEventListener("wheel", function (e) {
+
             e.preventDefault();
-            zoomScale *= e.deltaY > 0 ? 0.95 : 1.05; // Determine the new scale factor
+            const currentZoomScale = zoomScale;
+            const rightSideBeforeZoom = panX + (bBox.width) * currentZoomScale;
+            const centerYBeforeZoom = panY + (bBox.height / 2) * currentZoomScale;
+
+            // Determine the new scale factor
+            const newZoomScale = e.deltaY > 0 ? zoomScale * 0.95 : zoomScale * 1.05;
+            zoomScale = newZoomScale;
+
+            // Adjust panX to keep the right side stationary
+            const rightSideAfterZoom = panX + (bBox.width) * newZoomScale;
+            panX += rightSideBeforeZoom - rightSideAfterZoom;
+
+            // Adjust panY to keep the middle of the visible part stationary
+            const centerYAfterZoom = panY + (bBox.height / 2) * newZoomScale;
+            panY += (centerYBeforeZoom - centerYAfterZoom);
+
             updateTransform();
         });
+
+
 
         window.addEventListener("keydown", function (e) {
             switch (e.key) {
