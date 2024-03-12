@@ -40,7 +40,7 @@
       fill: var(--icon-fill-two);
     }
 
-    #lineIcon line {
+    #lineIcon {
       stroke: var(--icon-stroke-one);
     }
   </style>
@@ -101,7 +101,7 @@
 
           <symbol id="circleIcon" viewBox="0 0 20 20">
             <clipPath id="half">
-              <rect x="10" y="0" width="14" height="20" />
+              <rect x="4" y="0" width="4" height="8" />
             </clipPath>
             <circle cx="10" cy="10" r="8"></circle>
             <circle cx="10" cy="10" r="8" clip-path="url(#half)">
@@ -111,7 +111,7 @@
             <rect x="2" y="2" width="16" height="16"></rect>
           </symbol>
           <symbol id="lineIcon" viewBox="0 0 20 20">
-            <line x1="2" y1="10" x2="18" y2="10"></line>
+            <rect x="2" y="2" width="16" height="16"></rect>
           </symbol>
         </symbol>
         <mask id="chart-mask-def"></mask>
@@ -404,7 +404,6 @@
         indicatorGroup.appendChild(circle);
       });
       graphContainer.appendChild(indicatorGroup);
-      createLegend("circleIcon", key, {"fill-one":"hotpink", "fill-two": "cornflowerblue"})
     }
 
     function addFilledIndicator(key, indicator_upper, indicator_lower) {
@@ -489,7 +488,6 @@
       const indicatorPath = createPathElementFromPoints(pathPoints);
       indicatorGroup.appendChild(indicatorPath);
       graphContainer.appendChild(indicatorGroup);
-      createLegend("lineIcon", key, {"stroke-one":"red"})
     }
 
     function addIndicators(indicators) {
@@ -568,14 +566,14 @@
       );
     }
     function createLegend(iconId, key, iconColors) {
-      const iconSpacing = 10; // Space between the icon and text
-      const iconSize = 25; // Assuming square viewbox for simplicity
+      const iconSpacing = 20; // Space between the icon and text
+      const iconSize = 10; // Assuming square viewbox for simplicity
 
       if (iconId) {
         const useIcon = document.createElementNS("http://www.w3.org/2000/svg", "use");
         useIcon.setAttributeNS("http://www.w3.org/1999/xlink", "xlink:href", `#${iconId}`);
         useIcon.setAttribute("x", 0);
-        useIcon.setAttribute("y", legendYOffset - iconSize);
+        useIcon.setAttribute("y", legendYOffset - iconSize / 2);
         useIcon.setAttribute("width", iconSize);
         useIcon.setAttribute("height", iconSize);
 
@@ -592,7 +590,7 @@
       legendItem.textContent = key.replace(/-upper$/, ""); // Descriptive name
       legendItem.setAttribute("font-size", 40);
       legendItem.style.cursor = "pointer";
-     // legendItem.setAttribute("dominant-baseline", "middle");
+      legendItem.setAttribute("dominant-baseline", "middle");
       legendItem.setAttribute("data-indicator-id", `indicator-group-${simpleHash(key)}`);
       legendItem.addEventListener("click", toggleIndicatorVisibility);
       legendContainer.appendChild(legendItem);
