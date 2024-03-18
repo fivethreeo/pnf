@@ -150,7 +150,7 @@
     </div>
 
     <script>
-      const smoothing = 0.2;
+      const smoothing = 0.1;
       // Function to transpose a 2D array
       function transpose(arr) {
         return arr[0].map((_, colIndex) => arr.map((row) => row[colIndex]));
@@ -413,7 +413,7 @@
             return !Number.isNaN(value)
               ? [
                   (idx + 1.65) * xIncr,
-                  bBox.height - (Math.abs(value) - 7) * yIncr,
+                  bBox.height - (Math.abs(value) - 6.7) * yIncr,
                   Math.sign(value),
                 ]
               : false;
@@ -448,7 +448,7 @@
         const pathPointsUpper = indicator_upper
           .map((value, idx) => {
             return !Number.isNaN(value)
-              ? [(idx + 1.65) * xIncr, bBox.height - yIncr * (value - 7)]
+              ? [(idx + 1.65) * xIncr, bBox.height - yIncr * (value - 6.7)]
               : false;
           })
           .filter((x) => x);
@@ -456,7 +456,7 @@
         const pathPointsLower = indicator_lower
           .map((value, idx) => {
             return !Number.isNaN(value)
-              ? [(idx + 1.65) * xIncr, bBox.height - yIncr * (value - 7)]
+              ? [(idx + 1.65) * xIncr, bBox.height - yIncr * (value - 6.7)]
               : false;
           })
           .filter((x) => x);
@@ -505,7 +505,7 @@
         const pathPoints = indicator
           .map((value, idx) => {
             return !Number.isNaN(value)
-              ? [(idx + 1.65) * xIncr, bBox.height - yIncr * (value - 6)]
+              ? [(idx + 1.65) * xIncr, bBox.height - yIncr * (value - 6.7)]
               : false;
           })
           .filter((x) => x);
@@ -553,7 +553,7 @@
         plotBoxScale.forEach((scaleValue, i) => {
           if (i % decimationFactor !== 0) return; // Skip elements based on decimation factor
 
-          const yPos = (i + 1.2) * (yIncr) * zoomScale; // Calculate yPos using the scaled yIncr
+          const yPos = (i + 1.6) * (yIncr) * zoomScale; // Calculate yPos using the scaled yIncr
 
           // Create and append line to the yAxisContainer
           let line = cENs("line");
